@@ -8,21 +8,18 @@ timeout
 
 import requests
 import re
-import os
-import pandas as pd
 from bs4 import BeautifulSoup
 import lxml
 import logging
 import datetime
 import pytz
-import selenium.webdriver.chrome.options import Options
 
-SITE_URL = "https://www.vitalclimbinggym.com/brooklyn"
 
 class ExtractHeadCount:
 
-    def __init__(self):
+    def __init__(self, site_url):
         self.current_time = self._get_current_time()
+        self.site_url = site_url
 
     def _get_current_time(self):
         """
@@ -41,9 +38,10 @@ class ExtractHeadCount:
 
         try:
             response_soup = None
+            #Get a response to confirm the page is working
             response = requests.get(link, timeout=5)
             response.raise_for_status()
-            response_soup = BeautifulSoup(response.content, parser)
+            response_soup = BeautifulSoup(response)
         except requests.Timeout:
             logging.debug(f"ERROR: timeout limit reached for response \
                 at time: {timestamp_formatted}")
@@ -51,7 +49,7 @@ class ExtractHeadCount:
             logging.debug(f"ERROR: status code {response.status_code} \
                 raised error for response {timestamp_formatted}")
         except Exception as e:
-            logging.debug(f"ERROR: an exception was raised of type {e} \
+            logging.debug(f"ERROR: an exception was raised of type '{e}' \
                 for response: {timestamp_formatted}")
 
         if not response_soup:
@@ -67,19 +65,25 @@ class ExtractHeadCount:
         if not response:
             return None
         
-        head_count_pattern = re.compile(r'<span\sid="currocc">(\d{3})')
+        head_count_pattern = re.compile(r'<body>(\d+)<body>')
         head_count = re.search(head_count_pattern, str(response)).group(1)
+
+        if not head_count:
+            logging.debug(f"NO COUNT: the head_count_pattern did not \
+            match any number.")
+            head_count = None
 
         return head_count
 
-    def create_table(self):
-
-    def enhance_table(self):
-
     def main(self):
+        response = self.get_response(self.site_url)
+        head_count = self.extract_data(response)
+
+        return head_count
 
 
 if __name__ == "__main__":
-    ExtractHeadCount.main()
+    SITE_URL = "https://display.safespace.io/value/live/a7796f34"
+    ExtractHeadCount(SITE_URL).main()
             
 
